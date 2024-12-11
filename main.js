@@ -1,6 +1,5 @@
 const fetch = require("fetch-retry")(global.fetch);
 const url = require("url");
-const util = require("util");
 const parseString = require("xml2js").parseString;
 const stripPrefix = require("xml2js").processors.stripPrefix;
 
@@ -45,21 +44,28 @@ class cupiService {
       let options = this._OPTIONS;
       options.method = method;
       options.headers["Content-Type"] = contentType;
-      options.body = data ? JSON.stringify(data) : null;
+      options.body = data ? data : null;
       let host = this._HOST;
       let cleanedUrl = removeExtraSlashes(`https://${host}/${url}`);
       const response = await fetch(cleanedUrl, options);
       if (!response.ok) {
         throw { status: response.status, statusText: response.statusText };
       }
-      let output = await parseXml(await response.text());
-      if(!output){
-        return response.status
-      }
-      // Remove unnecessary keys
-      removeKeys(output, "$");
+      let returnData = await response.text();
 
-      return output;
+      // If the response is 201, return non parsed data
+      if(response.status === 201){
+        return returnData
+      }else{
+        let output = await parseXml(returnData);
+        if(!output){
+          return response.status
+        }
+        // Remove unnecessary keys
+        removeKeys(output, "$");
+  
+        return output;
+      }
     } catch (error) {
       throw error;
     }
